@@ -1,0 +1,38 @@
+* include-anywhere.el
+
+Insert import statements from anywhere
+
+どこからでもいい感じに import 文を挿入
+
+** Description
+
+This package provides `include-anywhere` command, which just inserts
+an import statement into the "right" position, regardless of where you
+are now.
+
+"Right" position is by default determined by `string<` predicate, and
+import statements will be ordered lexicographically (anyway you can
+customize this behavior).
+
+** Screencast
+
+[[screencast.gif]]
+
+** Usage
+
+Load this package in your init.el
+
+: (require 'include-anywhere)
+
+and call `M-x include-anywhere` in a buffer with supported
+major-modes listed below :
+
+- c-mode, java-mode
+- lisp-interaction-mode, emacs-lisp-mode
+- perl-mode, cperl-mode
+
+To add support for another major-mode, put something like
+
+: (push '(c-mode . ("#include <" . ">")) include-anywhere-alist)
+
+into your init.el.
