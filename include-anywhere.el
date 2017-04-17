@@ -76,12 +76,6 @@
   :group 'include-anywhere
   :type 'sexp)
 
-(defcustom include-anywhere-package< 'string<
-  "A function to compare two package names, which defines the
-order of import statements."
-  :group 'include-anywhere
-  :type 'function)
-
 (defface include-anywhere-face
   '((((background light)) (:background "#e0d9de" :foreground "#444444"))
     (t (:background "#594854" :foreground "#aaaaaa")))
@@ -117,7 +111,7 @@ current buffer."
       (goto-char (point-min))
       (let ((regex (include-anywhere--make-regexp packagename)) last-match-end)
         (while (and (search-forward-regexp regex nil t)
-                    (funcall include-anywhere-package< (match-string 1) packagename))
+                    (string< (match-string 1) packagename))
           (setq last-match-end (match-end 0)))
         (or last-match-end (point-min))))))
 
