@@ -85,7 +85,7 @@
 (defvar include-anywhere--window  nil)
 (defvar include-anywhere--overlay nil)
 
-(defun include-anywhere--make-regexp (packagename)
+(defun include-anywhere--make-regexp ()
   (let ((pair (or (assoc-default major-mode include-anywhere-alist)
                   (error "No syntax defined for the language."))))
     (concat "^" (regexp-quote (car pair)) "\\(\\_<.+\\_>\\).*$")))
@@ -104,23 +104,20 @@
 
 (defun include-anywhere--find-insertion-point (packagename)
   "Find point to insert include statement for PACKAGENAME in the
-current buffer."
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (let ((regex (include-anywhere--make-regexp packagename)) last-match-end)
-        (while (and (search-forward-regexp regex nil t)
-                    (string< (match-string 1) packagename))
-          (setq last-match-end (match-end 0)))
-        (or last-match-end (point-min))))))
+current buffer and move cursor there."
+  (goto-char (point-min))
+  (let ((regex (include-anywhere--make-regexp)) last-match-end)
+    (while (and (search-forward-regexp regex nil t)
+                (string< (match-string 1) packagename))
+      (setq last-match-end (match-end 0)))
+    (goto-char (or last-match-end (point-min)))))
 
 (defun include-anywhere--post-command ()
   (include-anywhere--maybe-delete-overlay)
   (let ((pair (assoc-default major-mode include-anywhere-alist))
         (query (minibuffer-contents)))
     (with-selected-window include-anywhere--window
-      (goto-char (include-anywhere--find-insertion-point query))
+      (include-anywhere--find-insertion-point query)
       (setq include-anywhere--overlay (make-overlay (point) (point)))
       (let ((str (include-anywhere--include-stmt query 'include-anywhere-face)))
         (overlay-put include-anywhere--overlay 'before-string str)))))
@@ -133,12 +130,14 @@ current buffer."
       (lambda () (add-hook 'post-command-hook 'include-anywhere--post-command nil t))
     (unwind-protect
         (save-excursion
-          (let ((pair (assoc-default major-mode include-anywhere-alist))
-                (packagename (read-from-minibuffer "Import module : ")))
-            (goto-char (include-anywhere--find-insertion-point packagename))
-            (insert (include-anywhere--include-stmt packagename))
-            (include-anywhere--maybe-delete-overlay)
-            (sit-for 0.2)))
+          (save-restriction
+            (let ((pair (assoc-default major-mode include-anywhere-alist))
+                  (packagename (read-from-minibuffer "Import module : ")))
+              (widen)
+              (include-anywhere--find-insertion-point packagename)
+              (insert (include-anywhere--include-stmt packagename))
+              (include-anywhere--maybe-delete-overlay)
+              (sit-for 0.2))))
       (include-anywhere--maybe-delete-overlay))))
 
 (provide 'include-anywhere)
