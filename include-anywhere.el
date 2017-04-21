@@ -90,7 +90,10 @@
                   (error "No syntax defined for the language."))))
     (concat "^" (regexp-quote (car pair)) "\\(\\_<.+\\_>\\).*$")))
 
-(defun include-anywhere--include-stmt (packagename &optional face)
+(defun include-anywhere--make-include-stmt (packagename &optional face)
+  "Make and return an include statement for package
+PACKAGENAME. When FACE is specified, the returned string will be
+propertized with the face."
   (let ((pair (or (assoc-default major-mode include-anywhere-alist)
                   (error "No syntax defined for the language."))))
     (concat (if (bobp) "" "\n")
@@ -119,7 +122,7 @@ current buffer and move cursor there."
     (with-selected-window include-anywhere--window
       (include-anywhere--find-insertion-point query)
       (setq include-anywhere--overlay (make-overlay (point) (point)))
-      (let ((str (include-anywhere--include-stmt query 'include-anywhere-face)))
+      (let ((str (include-anywhere--make-include-stmt query 'include-anywhere-face)))
         (overlay-put include-anywhere--overlay 'before-string str)))))
 
 (defun include-anywhere ()
@@ -135,7 +138,7 @@ current buffer and move cursor there."
                   (packagename (read-from-minibuffer "Import module : ")))
               (widen)
               (include-anywhere--find-insertion-point packagename)
-              (insert (include-anywhere--include-stmt packagename))
+              (insert (include-anywhere--make-include-stmt packagename))
               (include-anywhere--maybe-delete-overlay)
               (sit-for 0.2))))
       (include-anywhere--maybe-delete-overlay))))
