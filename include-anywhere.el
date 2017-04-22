@@ -103,25 +103,21 @@
   "Face used to highlight import statmeents to be inserted."
   :group 'include-anywhere)
 
-(defvar include-anywhere--window  nil)
-(defvar include-anywhere--overlay nil)
+;; + Utility Fns
 
 (defun include-anywhere--make-include-stmt (packagename &optional face)
-  "Make and return an include statement for package
-PACKAGENAME. When FACE is specified, the returned string will be
-propertized with the face."
+  "Make and return an include statement for package PACKAGENAME,
+according to the current buffer's major-mode. When FACE is
+specified, the returned string will be propertized with FACE."
   (let ((pair (or (assoc-default major-mode include-anywhere-alist)
                   (error "No syntax defined for the language."))))
     (concat (if (bolp) "" "\n")
             (propertize (concat (car pair) packagename (cdr pair)) 'face face)
             (if (bolp) "\n" ""))))
 
-(defun include-anywhere--maybe-delete-overlay ()
-  (when include-anywhere--overlay
-    (delete-overlay include-anywhere--overlay)
-    (setq include-anywhere--overlay nil)))
-
 (defun include-anywhere--string<= (str1 str2)
+  "Return non-nil if either (string= STR1 STR2) or (string< STR1
+STR2)."
   (let ((cmp (compare-strings str1 nil nil str2 nil nil)))
     (or (not (numberp cmp)) (< cmp 0))))
 
@@ -166,10 +162,22 @@ current buffer and move cursor there."
     (setq candidates (sort candidates (lambda (a b) (if (= (car a) (car b)) (> (cdr a) (cdr b)) (> (car a) (car b))))))
     (goto-char (cdar candidates))))
 
-(defun include-anywhere--post-command ()
-  (include-anywhere--maybe-delete-overlay)
+;; + User Interface
+
+(defvar include-anywhere--window  nil)
+(defvar include-anywhere--overlay nil)
+
+(defun include-anywhere--maybe-delete-overlay ()
+  (when include-anywhere--overlay
+    (delete-overlay include-anywhere--overlay)
+    (setq include-anywhere--overlay nil)))
+
+(defun include-anywhere--post-command-hook ()
+  "Make an preview overlay according to the current minibuffer
+input, and delete the older one."
   (let ((pair (assoc-default major-mode include-anywhere-alist))
         (query (minibuffer-contents)))
+    (include-anywhere--maybe-delete-overlay)
     (with-selected-window include-anywhere--window
       (include-anywhere--find-insertion-point query)
       (setq include-anywhere--overlay (make-overlay (point) (point)))
@@ -181,7 +189,7 @@ current buffer and move cursor there."
   (interactive)
   (setq include-anywhere--window (selected-window))
   (minibuffer-with-setup-hook
-      (lambda () (add-hook 'post-command-hook 'include-anywhere--post-command nil t))
+      (lambda () (add-hook 'post-command-hook 'include-anywhere--post-command-hook nil t))
     (unwind-protect
         (save-excursion
           (save-restriction
