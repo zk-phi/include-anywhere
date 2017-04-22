@@ -134,6 +134,7 @@ current buffer and move cursor there."
          last-match-beg last-match-end last-match
          current-match-beg current-match-end current-match candidates)
     (goto-char (point-min))
+    (while (forward-comment 1)) ; skip comments at the beginning of buffer
     (while (search-forward-regexp regex nil t)
       (setq last-match-beg    current-match-beg
             last-match-end    current-match-end
