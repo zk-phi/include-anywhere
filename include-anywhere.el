@@ -26,14 +26,35 @@
 ;; * Description
 ;;
 ;; This package provides `include-anywhere` command, which just
-;; inserts an import statement into the "right" position, regardless
+;; inserts an import statement into the suitable position, regardless
 ;; of where you are now.
 ;;
-;; "Right" position is by default determined by `string<` predicate,
-;; and import statements will be ordered lexicographically. (anyway
-;; you can customize this behavior).
+;; The insertion position for the package "MyApp::Foo" is roughly
+;; determined as follows :
 ;;
-;; * Usage
+;; 1. Find lexicographically suitable positions (that is, when the
+;; import statement is inserted there, it will be ordered
+;; lexicographically)
+;;
+;;   : use AAA;
+;;   : <<< suitable ("AAA" < "MyApp::Foo" < "XXX")
+;;   : use XXX;
+;;   : use MyApp::AAA;
+;;   : <<< suitable too ("MyApp::AAA" < "MyApp::Foo" < "MyApp::XXX")
+;;   : use MyApp::XXX;
+;;
+;; 2. Among these "suitable position"s, find the most suitable one as
+;; follows: A is more suitable than B if A has longer common substring
+;; than B with "MyApp::Foo".
+;;
+;;   : use AAA
+;;   : <<< "AAA" does not match "MyApp::Foo" at all
+;;   : use XXX
+;;   : use MyApp::AAA;
+;;   : <<< "MyApp::AAA" has a common part: "MyApp::"
+;;   : use MyApp::XXX;
+;;
+;;  * Usage
 ;;
 ;; Load this package in your init.el
 ;;
@@ -85,35 +106,64 @@
 (defvar include-anywhere--window  nil)
 (defvar include-anywhere--overlay nil)
 
-(defun include-anywhere--make-regexp ()
-  (let ((pair (or (assoc-default major-mode include-anywhere-alist)
-                  (error "No syntax defined for the language."))))
-    (concat "^" (regexp-quote (car pair)) "\\(\\_<.+\\_>\\).*$")))
-
 (defun include-anywhere--make-include-stmt (packagename &optional face)
   "Make and return an include statement for package
 PACKAGENAME. When FACE is specified, the returned string will be
 propertized with the face."
   (let ((pair (or (assoc-default major-mode include-anywhere-alist)
                   (error "No syntax defined for the language."))))
-    (concat (if (bobp) "" "\n")
+    (concat (if (bolp) "" "\n")
             (propertize (concat (car pair) packagename (cdr pair)) 'face face)
-            (if (bobp) "\n" ""))))
+            (if (bolp) "\n" ""))))
 
 (defun include-anywhere--maybe-delete-overlay ()
   (when include-anywhere--overlay
     (delete-overlay include-anywhere--overlay)
     (setq include-anywhere--overlay nil)))
 
+(defun include-anywhere--string<= (str1 str2)
+  (let ((cmp (compare-strings str1 nil nil str2 nil nil)))
+    (or (not (numberp cmp)) (< cmp 0))))
+
 (defun include-anywhere--find-insertion-point (packagename)
   "Find point to insert include statement for PACKAGENAME in the
 current buffer and move cursor there."
-  (goto-char (point-min))
-  (let ((regex (include-anywhere--make-regexp)) last-match-end)
-    (while (and (search-forward-regexp regex nil t)
-                (string< (match-string 1) packagename))
-      (setq last-match-end (match-end 0)))
-    (goto-char (or last-match-end (point-min)))))
+  (let* ((pair (or (assoc-default major-mode include-anywhere-alist)
+                   (error "No syntax defined for the language.")))
+         (regex (concat "^" (regexp-quote (car pair)) "\\(\\_<.+\\_>\\).*$"))
+         last-match-beg last-match-end last-match
+         current-match-beg current-match-end current-match candidates)
+    (goto-char (point-min))
+    (while (search-forward-regexp regex nil t)
+      (setq last-match-beg    current-match-beg
+            last-match-end    current-match-end
+            last-match        current-match
+            current-match-beg (match-beginning 0)
+            current-match-end (match-end 0)
+            current-match     (match-string 1))
+      (when (include-anywhere--string<= packagename current-match)
+        (cond ((null last-match)        ; [BOF] hoge < Y
+               (push (cons (length (fill-common-string-prefix packagename current-match))
+                           current-match-beg)
+                     candidates))
+              ((include-anywhere--string<= last-match packagename) ; X < hoge < Y
+               (let ((last (length (fill-common-string-prefix packagename last-match)))
+                     (current (length (fill-common-string-prefix packagename current-match))))
+                 (if (>= last current)
+                     (push (cons last last-match-end) candidates)
+                   (push (cons current current-match-beg) candidates))))
+              ((include-anywhere--string<= current-match last-match) ; X > hoge < Y
+               (push (cons (length (fill-common-string-prefix packagename current-match))
+                           current-match-beg)
+                     candidates)))))
+    (cond ((null candidates)            ; BOF, if no matches
+           (push (cons 0 (point)) candidates))
+          ((include-anywhere--string<= current-match packagename) ; X < hoge [EOF]
+           (push (cons (length (fill-common-string-prefix packagename current-match))
+                       current-match-end)
+                 candidates)))
+    (setq candidates (sort candidates (lambda (a b) (if (= (car a) (car b)) (> (cdr a) (cdr b)) (> (car a) (car b))))))
+    (goto-char (cdar candidates))))
 
 (defun include-anywhere--post-command ()
   (include-anywhere--maybe-delete-overlay)
