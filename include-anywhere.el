@@ -103,6 +103,14 @@
   "Face used to highlight import statmeents to be inserted."
   :group 'include-anywhere)
 
+(defcustom include-anywhere-map
+  (let ((keymap (copy-keymap minibuffer-local-map)))
+    (define-key keymap (kbd "C-w") 'include-anywhere-yank-symbol)
+    keymap)
+  "Map used while entering package name."
+  :group 'include-anywhere
+  :type 'sexp)
+
 ;; + Utility Fns
 
 (defun include-anywhere--make-include-stmt (packagename &optional face)
@@ -166,6 +174,7 @@ current buffer and move cursor there."
 
 (defvar include-anywhere--window  nil)
 (defvar include-anywhere--overlay nil)
+(defvar include-anywhere--pos     nil)
 
 (defun include-anywhere--maybe-delete-overlay ()
   (when include-anywhere--overlay
@@ -184,17 +193,27 @@ input, and delete the older one."
       (let ((str (include-anywhere--make-include-stmt query 'include-anywhere-face)))
         (overlay-put include-anywhere--overlay 'before-string str)))))
 
+(defun include-anywhere-yank-symbol ()
+  "Yank symbol just before the point."
+  (interactive)
+  (let ((str (with-selected-window include-anywhere--window
+               (goto-char include-anywhere--pos)
+               (looking-back "\\_<\\(.*\\)\\_>.*")
+               (match-string 1))))
+    (insert str)))
+
 (defun include-anywhere ()
   "insert import statements from anywhere."
   (interactive)
-  (setq include-anywhere--window (selected-window))
+  (setq include-anywhere--window (selected-window)
+        include-anywhere--pos    (point))
   (minibuffer-with-setup-hook
       (lambda () (add-hook 'post-command-hook 'include-anywhere--post-command-hook nil t))
     (unwind-protect
         (save-excursion
           (save-restriction
             (let ((pair (assoc-default major-mode include-anywhere-alist))
-                  (packagename (read-from-minibuffer "Import module : ")))
+                  (packagename (read-from-minibuffer "Import module : " nil include-anywhere-map)))
               (widen)
               (include-anywhere--find-insertion-point packagename)
               (insert (include-anywhere--make-include-stmt packagename))
