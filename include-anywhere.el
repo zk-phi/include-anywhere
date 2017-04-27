@@ -81,6 +81,12 @@
   "Insert import statements from anywhere."
   :group 'emacs)
 
+(defcustom include-anywhere-enable-auto-yank t
+  "When non-nil, the symbol before point is inserted as a
+placeholder."
+  :group 'include-anywhere
+  :type 'boolean)
+
 (defcustom include-anywhere-alist
   '((c-mode . ("#include <" . ">"))     ; WIP: #include "foo.h" syntax ?
     (ruby-mode . ("require '" . "'"))   ; WIP: require_relative ?
@@ -207,7 +213,9 @@ input, and delete the older one."
   (setq include-anywhere--window (selected-window)
         include-anywhere--pos    (point))
   (minibuffer-with-setup-hook
-      (lambda () (add-hook 'post-command-hook 'include-anywhere--post-command-hook nil t))
+      (lambda ()
+        (add-hook 'post-command-hook 'include-anywhere--post-command-hook nil t)
+        (when include-anywhere-enable-auto-yank (include-anywhere-yank-symbol)))
     (unwind-protect
         (save-excursion
           (save-restriction
