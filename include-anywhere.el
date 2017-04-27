@@ -196,11 +196,10 @@ input, and delete the older one."
 (defun include-anywhere-yank-symbol ()
   "Yank symbol just before the point."
   (interactive)
-  (let ((str (with-selected-window include-anywhere--window
-               (goto-char include-anywhere--pos)
-               (looking-back "\\_<\\(.*\\)\\_>.*")
-               (match-string 1))))
-    (insert str)))
+  (insert
+   (with-selected-window include-anywhere--window
+     (goto-char include-anywhere--pos)
+     (if (looking-back "\\_<\\(.*\\)\\_>.*") (match-string 1) ""))))
 
 (defun include-anywhere ()
   "insert import statements from anywhere."
