@@ -205,7 +205,7 @@ input, and delete the older one."
   (insert
    (with-selected-window include-anywhere--window
      (goto-char include-anywhere--pos)
-     (if (looking-back "\\_<\\(.*\\)\\_>.*") (match-string 1) ""))))
+     (if (looking-back "\\_<\\(.*\\)\\(?:\\_>.*\\)?") (match-string 1) ""))))
 
 (defun include-anywhere ()
   "insert import statements from anywhere."
