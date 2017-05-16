@@ -17,7 +17,7 @@
 ;; Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 ;; Author: zk_phi
-;; URL: http://hins11.yu-yake.com/
+;; URL: https://github.com/zk-phi/include-anywhere
 ;; Version: 0.0.0
 ;; Package-Requires: ((emacs "24.3"))
 
