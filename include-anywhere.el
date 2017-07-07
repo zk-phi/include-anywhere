@@ -87,6 +87,12 @@ placeholder."
   :group 'include-anywhere
   :type 'boolean)
 
+(defcustom include-anywhere-invert-case t
+  "When non-nil, lowercase chars are considered to be lower than
+upcase chars, while comparing package names."
+  :group 'include-anywhere
+  :type 'boolean)
+
 (defcustom include-anywhere-alist
   '((c-mode . ("#include <" . ">"))     ; WIP: #include "foo.h" syntax ?
     (ruby-mode . ("require '" . "'"))   ; WIP: require_relative ?
@@ -129,10 +135,20 @@ specified, the returned string will be propertized with FACE."
             (propertize (concat (car pair) packagename (cdr pair)) 'face face)
             (if (bolp) "\n" ""))))
 
+(defun include-anywhere--invert-case (str)
+  (apply 'string
+         (mapcar (lambda (ch)
+                   (+ ch (if (and (<= ?a ch) (<= ch ?z)) (- ?A ?a) (- ?a ?A))))
+                 str)))
+
 (defun include-anywhere--string<= (str1 str2)
   "Return non-nil if either (string= STR1 STR2) or (string< STR1
-STR2)."
-  (let ((cmp (compare-strings str1 nil nil str2 nil nil)))
+STR2). Unlike `string<', this function consider lowercase chars
+larger than uppercase chars if `include-anywhere-invert-case' is
+non-nil."
+  (let* ((str1 (if include-anywhere-invert-case (include-anywhere--invert-case str1) str1))
+         (str2 (if include-anywhere-invert-case (include-anywhere--invert-case str2) str2))
+         (cmp (compare-strings str1 nil nil str2 nil nil)))
     (or (not (numberp cmp)) (< cmp 0))))
 
 (defun include-anywhere--find-insertion-point (packagename)
