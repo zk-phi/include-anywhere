@@ -173,7 +173,10 @@ current buffer and move cursor there."
            (push (cons (length (fill-common-string-prefix packagename current-match))
                        current-match-end)
                  candidates)))
-    (setq candidates (sort candidates (lambda (a b) (if (= (car a) (car b)) (< (cdr a) (cdr b)) (> (car a) (car b))))))
+    (setq candidates
+          (sort candidates
+                (lambda (a b)
+                  (if (= (car a) (car b)) (< (cdr a) (cdr b)) (> (car a) (car b))))))
     (goto-char (cdar candidates))))
 
 ;; + User Interface
