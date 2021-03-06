@@ -1,3 +1,4 @@
+;;; -*- lexical-binding: t -*-
 ;;; include-anywhere.el --- Insert import statements from anywhere
 
 ;; Copyright (C) 2017- zk_phi
