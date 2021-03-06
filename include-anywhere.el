@@ -157,13 +157,12 @@ current buffer and move cursor there."
   (let* ((pair (or (assoc-default major-mode include-anywhere-alist)
                    (error "No syntax defined for the language.")))
          (regex (concat "^" (regexp-quote (car pair)) "\\(\\_<.+\\_>\\).*$"))
-         last-match-beg last-match-end last-match
+         last-match-end last-match
          current-match-beg current-match-end current-match candidates)
     (goto-char (point-min))
     (while (forward-comment 1)) ; skip comments at the beginning of buffer
     (while (search-forward-regexp regex nil t)
-      (setq last-match-beg    current-match-beg
-            last-match-end    current-match-end
+      (setq last-match-end    current-match-end
             last-match        current-match
             current-match-beg (match-beginning 0)
             current-match-end (match-end 0)
@@ -209,8 +208,7 @@ current buffer and move cursor there."
 (defun include-anywhere--post-command-hook ()
   "Make an preview overlay according to the current minibuffer
 input, and delete the older one."
-  (let ((pair (assoc-default major-mode include-anywhere-alist))
-        (query (minibuffer-contents)))
+  (let ((query (minibuffer-contents)))
     (include-anywhere--maybe-delete-overlay)
     (with-selected-window include-anywhere--window
       (include-anywhere--find-insertion-point query)
@@ -238,8 +236,7 @@ input, and delete the older one."
     (unwind-protect
         (save-excursion
           (save-restriction
-            (let ((pair (assoc-default major-mode include-anywhere-alist))
-                  (packagename (read-from-minibuffer "Import module : " nil include-anywhere-map)))
+            (let ((packagename (read-from-minibuffer "Import module : " nil include-anywhere-map)))
               (widen)
               (include-anywhere--find-insertion-point packagename)
               (insert (include-anywhere--make-include-stmt packagename))
